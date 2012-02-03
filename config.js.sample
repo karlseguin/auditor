@@ -1,0 +1,5 @@
+module.exports = {
+  server: {host: '127.0.0.1', port: 4005},
+  dynamodb: {accessKeyId: 'YOUR ACCESs KEY', secretAccessKey: 'YOUR ACCESS SECRET'},
+  api: {locationRoot: 'http://yourdomain.com/'}
+};
