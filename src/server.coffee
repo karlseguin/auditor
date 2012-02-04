@@ -5,7 +5,7 @@ Log = require('./log')
 server = (config) ->
   server = connect()
   server.use connect.bodyParser()
-  server.use connect.queryParse()
+  server.use connect.query()
   server.use connect.router (app) ->
 
     app.post '/log', (req, res, next) ->
@@ -13,7 +13,7 @@ server = (config) ->
       try
         log.validate()
         log.save (err) ->
-          return util.errorResponse(res, err) if err ? 
+          return util.errorResponse(res, err) if err ?
           location = config.api.locationRoot + 'log/' + log.id
           res.writeHead(201, {'Content-Type': 'application/json', 'Location': location})
           res.end(JSON.stringify(log))
@@ -26,11 +26,12 @@ server = (config) ->
         res.end(JSON.stringify(log))
 
     app.get '/logs', (req, res, next) ->
-      #TODO Log.search 'XX', (err, log)
+      Log.find req.query.user, req.query.asset, (err, items) =>
+        return util.errorResponse(res, err) if err?
+        res.end(JSON.stringify(items))
 
-    
   server.listen(config.server.port, config.server.listen)
-  console.log('Server running on http://%s:%d', config.server.listen, config.server.port);
+  console.log('Server running on http://%s:%d', config.server.host, config.server.port);
 
 
 module.exports = server

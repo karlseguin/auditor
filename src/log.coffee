@@ -17,13 +17,11 @@ class Log
 
   save: (callback) =>
     ddb.putItem 'logs', this.serialize(), {}, (err, res, cap) =>
-
       return callback(err, null) if err?
 
-      ddb.putItem 'logs_by_user', {user: @user, time: @created.getTime(), id: @id}, {}, ->
+      ddb.putItem 'logs_by_user', {user: @user, time: @created.getTime(), id: @id}, {}, (err, x, y)->
       ddb.putItem 'logs_by_asset', {asset: @asset, time: @created.getTime(), id: @id}, {}, ->
       ddb.putItem 'logs_by_user_asset', {userasset: @user + ':' + @asset, time: @created.getTime(), id: @id}, {}, ->
-      callback(null, res)
 
   serialize: =>
     {id: @id, user: @user, asset: @asset, created: @created.getTime(), changes: JSON.stringify(@changes)}
@@ -33,7 +31,29 @@ class Log
       return callback(err, null) if err?
       callback(null, this.deserialize(res))
 
-  
+  @find: (user, asset, callback) =>
+    if user? && asset?
+      table = 'logs_by_user_asset'
+      key = user + ':' + asset
+    else if user?
+      table = 'logs_by_user'
+      key = user
+    else if asset?
+      table = 'logs_by_asset'
+      key = asset
+    else
+      return callback('missing user and/or asset', null)
+
+    ddb.query table,  key, null, {attributesToGet: ['id']}, (err, res) =>
+      return callback(err, null) if err?
+      ids = (key.id for key in res.Items)
+      ddb.batchGetItem {table: 'logs', keys: ids}, (err, res) =>
+        return callback(err, null) if err?
+        items = []
+        for item in res.Items
+          items.push(this.deserialize(item))
+        callback(null, items)
+
   @deserialize: (data) =>
     data.created = new Date(data.created)
     data.changes = JSON.parse(data.changes)
